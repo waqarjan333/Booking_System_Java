@@ -4,6 +4,7 @@ import com.bpc.model.*;
 import com.bpc.service.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 
@@ -11,6 +12,7 @@ public class Main {
     private static final LocalDateTime CURRENT_DATE_TIME = LocalDateTime.of(2025, 3, 23, 0, 0);
     private static final ClinicSystem clinic = new ClinicSystem(CURRENT_DATE_TIME);
     private static final ReportGenerator reportGenerator = new ReportGenerator(clinic);
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -32,49 +34,154 @@ public class Main {
         System.out.println("=== Starting Self-Run Demo ===");
         initializeData();
 
-        System.out.println("\n1. Adding Patients:");
-        System.out.println("Added 10 patients.");
+        // Step 1: Display Initial Setup
+        System.out.println("\nStep 1: Initial Setup");
+        System.out.println("Current Date and Time: " + CURRENT_DATE_TIME.format(formatter));
+        System.out.println("Initialized 4 physiotherapists and 10 patients.");
+        System.out.println("Timetable created with 21 appointments from March 24 to April 20, 2025.");
+        System.out.println("Physiotherapists:");
+        clinic.getPhysiotherapists().forEach(p -> System.out.println("ID: " + p.getId() + ", Name: " + p.getName() + ", Expertise: " + p.getExpertise()));
+        System.out.println("Patients:");
+        clinic.getPatients().forEach(p -> System.out.println("ID: " + p.getId() + ", Name: " + p.getName()));
 
-        System.out.println("\n2. Available Slots by Expertise (Physiotherapy):");
-        clinic.getTimetable().getAvailableSlotsByExpertise("Physiotherapy").forEach(a ->
-                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() + ", Treatment: " + a.getTreatment().getName()));
+        // Step 2: Add a New Patient
+        System.out.println("\nStep 2: Adding a New Patient");
+        try {
+            clinic.addPatient(new Patient("PT11", "Kelly Pink", "111 Rose St", "555-0211"));
+            System.out.println("Successfully added new patient: ID: PT11, Name: Kelly Pink");
+        } catch (Exception e) {
+            System.out.println("Error adding patient: " + e.getMessage());
+        }
 
-        System.out.println("\n3. Booking by Expertise:");
-        clinic.bookByExpertise("Physiotherapy", "A1", clinic.getPatients().get(0)); // Alice with Dr. Smith
-        clinic.bookByExpertise("Physiotherapy", "A4", clinic.getPatients().get(1)); // Bob with Dr. Lee
-        clinic.bookByExpertise("Physiotherapy", "A6", clinic.getPatients().get(2)); // Charlie with Dr. Smith
-        System.out.println("Booked A1 for Alice, A4 for Bob, and A6 for Charlie.");
+        // Step 3: Attempt to Add a Duplicate Patient (Error Handling)
+        System.out.println("\nStep 3: Attempting to Add a Duplicate Patient (Error Handling)");
+        try {
+            clinic.addPatient(new Patient("PT11", "Duplicate Patient", "222 Lily St", "555-0212"));
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
 
-        System.out.println("\n4. Available Slots by Physiotherapist (P3):");
-        clinic.getTimetable().getAvailableSlotsByPhysiotherapist("P3").forEach(a ->
-                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() + ", Treatment: " + a.getTreatment().getName()));
+        // Step 4: Remove a Patient
+        System.out.println("\nStep 4: Removing a Patient");
+        try {
+            clinic.removePatient("PT11");
+            System.out.println("Successfully removed patient with ID: PT11");
+        } catch (Exception e) {
+            System.out.println("Error removing patient: " + e.getMessage());
+        }
 
-        System.out.println("\n5. Booking by Physiotherapist:");
-        clinic.bookByPhysiotherapist("P3", "A8", clinic.getPatients().get(3)); // Diana with Dr. Lee
-        clinic.bookByPhysiotherapist("P3", "A12", clinic.getPatients().get(4)); // Eve with Dr. Lee
-        clinic.bookByPhysiotherapist("P2", "A3", clinic.getPatients().get(5)); // Frank with Dr. Jones
-        clinic.bookByPhysiotherapist("P4", "A18", clinic.getPatients().get(6)); // Grace with Dr. Brown
-        System.out.println("Booked A8 for Diana and A12 for Eve with Dr. Lee, A3 for Frank with Dr. Jones, and A18 for Grace with Dr. Brown.");
+        // Step 5: View Available Slots by Expertise (Physiotherapy)
+        System.out.println("\nStep 5: Viewing Available Slots by Expertise (Physiotherapy)");
+        List<Appointment> physioSlots = clinic.getTimetable().getAvailableSlotsByExpertise("Physiotherapy");
+        if (physioSlots.isEmpty()) {
+            System.out.println("No available slots for Physiotherapy.");
+        } else {
+            physioSlots.forEach(a -> System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
+                    ", Treatment: " + a.getTreatment().getName() + ", Physiotherapist: " + a.getPhysiotherapist().getName()));
+        }
 
-        System.out.println("\n6. Rescheduling Appointment:");
-        clinic.rescheduleAppointment("A12", "A16", clinic.getPatients().get(4)); // Reschedule Eve from A12 to A16
-        System.out.println("Rescheduled Eve's appointment from A12 to A16 with Dr. Lee.");
+        // Step 6: View Available Slots by Physiotherapist (Dr. Lee, P3)
+        System.out.println("\nStep 6: Viewing Available Slots by Physiotherapist (Dr. Lee, P3)");
+        List<Appointment> drLeeSlots = clinic.getTimetable().getAvailableSlotsByPhysiotherapist("P3");
+        if (drLeeSlots.isEmpty()) {
+            System.out.println("No available slots for Dr. Lee (P3).");
+        } else {
+            drLeeSlots.forEach(a -> System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
+                    ", Treatment: " + a.getTreatment().getName()));
+        }
 
-        System.out.println("\n7. Marking Appointments as Attended:");
-        clinic.getTimetable().findById("A1").attend();
-        clinic.getTimetable().findById("A4").attend();
-        clinic.getTimetable().findById("A16").attend(); // Eve's rescheduled appointment
-        clinic.getTimetable().findById("A3").attend();
-        System.out.println("A1, A4, A16, and A3 marked as attended.");
+        // Step 7: Book Appointments by Expertise
+        System.out.println("\nStep 7: Booking Appointments by Expertise");
+        try {
+            clinic.bookByExpertise("Physiotherapy", "A1", clinic.getPatients().get(0)); // Alice with Dr. Smith
+            clinic.bookByExpertise("Physiotherapy", "A4", clinic.getPatients().get(1)); // Bob with Dr. Lee
+            clinic.bookByExpertise("Physiotherapy", "A6", clinic.getPatients().get(2)); // Charlie with Dr. Smith
+            System.out.println("Booked A1 for Alice with Dr. Smith (Massage)");
+            System.out.println("Booked A4 for Bob with Dr. Lee (Neural Mobilisation)");
+            System.out.println("Booked A6 for Charlie with Dr. Smith (Massage)");
+        } catch (Exception e) {
+            System.out.println("Error booking by expertise: " + e.getMessage());
+        }
 
-        System.out.println("\n8. Cancelling Appointments:");
-        clinic.cancelAppointment("A6", clinic.getPatients().get(2)); // Charlie
-        clinic.cancelAppointment("A8", clinic.getPatients().get(3)); // Diana
-        clinic.cancelAppointment("A18", clinic.getPatients().get(6)); // Grace
-        System.out.println("A6, A8, and A18 cancelled.");
+        // Step 8: Attempt to Book an Already Booked Slot (Error Handling)
+        System.out.println("\nStep 8: Attempting to Book an Already Booked Slot (Error Handling)");
+        try {
+            clinic.bookByExpertise("Physiotherapy", "A1", clinic.getPatients().get(3)); // Diana tries to book A1
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
 
-        // New Step: Display Patient Appointments
-        System.out.println("\n9. Displaying Patient Appointments:");
+        // Step 9: Book Appointments by Physiotherapist
+        System.out.println("\nStep 9: Booking Appointments by Physiotherapist");
+        try {
+            clinic.bookByPhysiotherapist("P3", "A8", clinic.getPatients().get(3)); // Diana with Dr. Lee
+            clinic.bookByPhysiotherapist("P3", "A12", clinic.getPatients().get(4)); // Eve with Dr. Lee
+            clinic.bookByPhysiotherapist("P2", "A3", clinic.getPatients().get(5)); // Frank with Dr. Jones
+            clinic.bookByPhysiotherapist("P4", "A18", clinic.getPatients().get(6)); // Grace with Dr. Brown
+            System.out.println("Booked A8 for Diana with Dr. Lee (Neural Mobilisation)");
+            System.out.println("Booked A12 for Eve with Dr. Lee (Neural Mobilisation)");
+            System.out.println("Booked A3 for Frank with Dr. Jones (Acupuncture)");
+            System.out.println("Booked A18 for Grace with Dr. Brown (Mobilisation of the Spine)");
+        } catch (Exception e) {
+            System.out.println("Error booking by physiotherapist: " + e.getMessage());
+        }
+
+        // Step 10: Reschedule an Appointment
+        System.out.println("\nStep 10: Rescheduling an Appointment");
+        try {
+            System.out.println("Available slots for Physiotherapy (Eve's current treatment expertise):");
+            List<Appointment> availableForReschedule = clinic.getTimetable().getAvailableSlotsByExpertise("Physiotherapy");
+            availableForReschedule.forEach(a -> System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
+                    ", Treatment: " + a.getTreatment().getName() + ", Physiotherapist: " + a.getPhysiotherapist().getName()));
+            clinic.rescheduleAppointment("A12", "A16", clinic.getPatients().get(4)); // Reschedule Eve from A12 to A16
+            System.out.println("Rescheduled Eve's appointment from A12 to A16 with Dr. Lee (Neural Mobilisation)");
+            System.out.println("A12 Status: " + clinic.getTimetable().findById("A12").getStatus());
+            System.out.println("A16 Status: " + clinic.getTimetable().findById("A16").getStatus());
+        } catch (Exception e) {
+            System.out.println("Error rescheduling: " + e.getMessage());
+        }
+
+        // Step 11: Attempt to Reschedule to a Non-Available Slot (Error Handling)
+        System.out.println("\nStep 11: Attempting to Reschedule to a Non-Available Slot (Error Handling)");
+        try {
+            clinic.rescheduleAppointment("A1", "A4", clinic.getPatients().get(0)); // Alice tries to reschedule to A4 (already booked)
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+        // Step 12: Mark Appointments as Attended
+        System.out.println("\nStep 12: Marking Appointments as Attended");
+        try {
+            clinic.getTimetable().findById("A1").attend(); // Alice
+            clinic.getTimetable().findById("A4").attend(); // Bob
+            clinic.getTimetable().findById("A16").attend(); // Eve
+            clinic.getTimetable().findById("A3").attend(); // Frank
+            System.out.println("Marked A1 (Alice), A4 (Bob), A16 (Eve), and A3 (Frank) as attended.");
+        } catch (Exception e) {
+            System.out.println("Error marking attendance: " + e.getMessage());
+        }
+
+        // Step 13: Cancel Appointments
+        System.out.println("\nStep 13: Cancelling Appointments");
+        try {
+            clinic.cancelAppointment("A6", clinic.getPatients().get(2)); // Charlie
+            clinic.cancelAppointment("A8", clinic.getPatients().get(3)); // Diana
+            clinic.cancelAppointment("A18", clinic.getPatients().get(6)); // Grace
+            System.out.println("Cancelled A6 (Charlie), A8 (Diana), and A18 (Grace).");
+        } catch (Exception e) {
+            System.out.println("Error cancelling: " + e.getMessage());
+        }
+
+        // Step 14: Attempt to Cancel an Unbooked Appointment (Error Handling)
+        System.out.println("\nStep 14: Attempting to Cancel an Unbooked Appointment (Error Handling)");
+        try {
+            clinic.cancelAppointment("A2", clinic.getPatients().get(0)); // A2 is not booked
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+        // Step 15: View Patient Appointments
+        System.out.println("\nStep 15: Viewing Patient Appointments");
         String[] patientIds = {"PT1", "PT2", "PT5", "PT6"}; // Alice, Bob, Eve, Frank
         for (String patientId : patientIds) {
             Patient patient = clinic.getPatients().stream()
@@ -87,19 +194,19 @@ public class Main {
                 if (appointments.isEmpty()) {
                     System.out.println("No upcoming appointments.");
                 } else {
-                    appointments.forEach(a ->
-                            System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
-                                    ", Treatment: " + a.getTreatment().getName() +
-                                    ", Physiotherapist: " + a.getPhysiotherapist().getName() +
-                                    ", Status: " + a.getStatus()));
+                    appointments.forEach(a -> System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
+                            ", Treatment: " + a.getTreatment().getName() +
+                            ", Physiotherapist: " + a.getPhysiotherapist().getName() +
+                            ", Status: " + a.getStatus()));
                 }
             }
         }
 
-        System.out.println("\n10. Generating Report:");
+        // Step 16: Generate Report
+        System.out.println("\nStep 16: Generating Report");
         reportGenerator.generateReport();
 
-        System.out.println("=== Self-Run Demo Complete ===");
+        System.out.println("\n=== Self-Run Demo Complete ===");
     }
 
     private static void runMenu(Scanner scanner) {
@@ -119,7 +226,7 @@ public class Main {
             System.out.println("11. View All Appointments");
             System.out.println("12. Generate Report");
             System.out.println("13. Exit");
-            System.out.println("14. View Patient Appointments"); // New option
+            System.out.println("14. View Patient Appointments");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
             scanner.nextLine(); // Clear buffer
@@ -161,7 +268,7 @@ public class Main {
                             System.out.println("No available slots for expertise: " + expertiseView);
                         } else {
                             expertiseSlotsView.forEach(a ->
-                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                             ", Treatment: " + a.getTreatment().getName() +
                                             ", Physiotherapist: " + a.getPhysiotherapist().getName()));
                         }
@@ -177,7 +284,7 @@ public class Main {
                             System.out.println("No available slots for physiotherapist: " + physioIdView);
                         } else {
                             physioSlotsView.forEach(a ->
-                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                             ", Treatment: " + a.getTreatment().getName()));
                         }
                         break;
@@ -190,7 +297,7 @@ public class Main {
                             break;
                         }
                         expertiseSlots.forEach(a ->
-                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                         ", Treatment: " + a.getTreatment().getName() +
                                         ", Physiotherapist: " + a.getPhysiotherapist().getName()));
                         System.out.print("Enter Appointment ID: ");
@@ -219,7 +326,7 @@ public class Main {
                             break;
                         }
                         physioSlots.forEach(a ->
-                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                         ", Treatment: " + a.getTreatment().getName()));
                         System.out.print("Enter Appointment ID: ");
                         String apptId2 = scanner.nextLine();
@@ -255,7 +362,7 @@ public class Main {
                             break;
                         }
                         availableSlots.forEach(a ->
-                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                         ", Treatment: " + a.getTreatment().getName() +
                                         ", Physiotherapist: " + a.getPhysiotherapist().getName()));
                         System.out.print("Enter New Appointment ID: ");
@@ -297,7 +404,7 @@ public class Main {
                         System.out.println("=== All Appointments ===");
                         clinic.getTimetable().getAllAppointments().forEach(a ->
                                 System.out.println("ID: " + a.getId() + ", Physio: " + a.getPhysiotherapist().getName() +
-                                        ", Treatment: " + a.getTreatment().getName() + ", Time: " + a.getStartTime() +
+                                        ", Treatment: " + a.getTreatment().getName() + ", Time: " + a.getStartTime().format(formatter) +
                                         ", Status: " + a.getStatus()));
                         break;
                     case 12:
@@ -306,7 +413,7 @@ public class Main {
                     case 13:
                         System.out.println("Exiting...");
                         return;
-                    case 14: // New option: View Patient Appointments
+                    case 14:
                         System.out.print("Enter Patient ID: ");
                         String patientIdView = scanner.nextLine();
                         Patient patientView = clinic.getPatients().stream()
@@ -319,7 +426,7 @@ public class Main {
                             System.out.println("No upcoming appointments.");
                         } else {
                             patientAppointments.forEach(a ->
-                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime() +
+                                    System.out.println("ID: " + a.getId() + ", Time: " + a.getStartTime().format(formatter) +
                                             ", Treatment: " + a.getTreatment().getName() +
                                             ", Physiotherapist: " + a.getPhysiotherapist().getName() +
                                             ", Status: " + a.getStatus()));
